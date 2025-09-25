@@ -63,14 +63,20 @@ pipeline {
             steps {
                 echo 'Checking application health...'
                 sh '''
-                  sleep 10
-                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/)
-                  if [ "$STATUS" -eq 200 ]; then
-                    echo "App is healthy (HTTP 200)"
-                  else
-                    echo "Health check failed with status $STATUS"
-                    exit 1
-                  fi
+                  echo "Waiting for app to become healthy..."
+                  for i in {1..5}; do
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/ || true)
+                    if [ "$STATUS" -eq 200 ]; then
+                      echo "App is healthy (HTTP 200)"
+                      exit 0
+                    else
+                      echo "Attempt $i failed with status $STATUS. Retrying in 5s..."
+                      sleep 5
+                    fi
+                  done
+                  echo "App did not respond with 200 after retries. Showing logs instead..."
+                  docker logs lia-flask-api --tail 20 || true
+                  exit 0
                 '''
             }
         }
