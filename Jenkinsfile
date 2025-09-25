@@ -33,15 +33,16 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying container...'
-                sh '''
-                  docker run -d --name lia-flask-api -p 5000:5000 lia-flask-api || true
-                '''
+        sh '''
+          docker rm -f lia-flask-api || true
+          docker run -d --name lia-flask-api -p 5000:5000 lia-flask-api
+        '''
             }
         }
 
         stage('Release') {
             environment {
-                IMAGE = 'liajohn30/lia-flask-api'
+                IMAGE = 'liajohn/lia-flask-api'
                 TAG = "${env.BUILD_NUMBER}"
             }
             steps {
