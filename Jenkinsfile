@@ -33,10 +33,10 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying container...'
-        sh '''
-          docker rm -f lia-flask-api || true
-          docker run -d --name lia-flask-api -p 5000:5000 lia-flask-api
-        '''
+                sh '''
+                  docker rm -f lia-flask-api || true
+                  docker run -d --name lia-flask-api -p 5000:5000 lia-flask-api
+                '''
             }
         }
 
@@ -48,13 +48,13 @@ pipeline {
             steps {
                 echo 'Releasing Docker image to DockerHub...'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
-                    sh """
-                        docker tag lia-flask-api ${IMAGE}:${TAG}
-                        docker tag lia-flask-api ${IMAGE}:latest
-                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-                        docker push ${IMAGE}:${TAG}
-                        docker push ${IMAGE}:latest
-                    """
+                    sh '''
+                      docker tag lia-flask-api ${IMAGE}:${TAG}
+                      docker tag lia-flask-api ${IMAGE}:latest
+                      echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
+                      docker push ${IMAGE}:${TAG}
+                      docker push ${IMAGE}:latest
+                    '''
                 }
             }
         }
@@ -62,14 +62,13 @@ pipeline {
         stage('Monitoring') {
             steps {
                 echo 'Checking application health...'
-                // Wait a bit for container startup
-                sh 'sleep 5'
-                // Use curl to hit health endpoint
                 sh '''
-                  if curl -s http://localhost:5000/ | grep "Welcome Lia"; then
-                    echo "Health check passed!"
+                  sleep 10
+                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/)
+                  if [ "$STATUS" -eq 200 ]; then
+                    echo "App is healthy (HTTP 200)"
                   else
-                    echo "Health check failed!"
+                    echo "Health check failed with status $STATUS"
                     exit 1
                   fi
                 '''
